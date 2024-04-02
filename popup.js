@@ -1,54 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
-  console.log("Popup DOM fully loaded and parsed");
-  
-  document.getElementById('good').addEventListener('click', () => ratePage(1));
-  document.getElementById('bad').addEventListener('click', () => ratePage(0));
-  document.getElementById('export').addEventListener('click', exportRatings);
-
-  checkExportEligibility();
+  document.getElementById('good').addEventListener('click', () => triggerContentScript(1));
+  document.getElementById('bad').addEventListener('click', () => triggerContentScript(0));
 });
 
-function ratePage(rating) {
-  console.log(`Rating action initiated with rating: ${rating}`);
-  chrome.tabs.query({active: true, currentWindow: true}, tabs => {
-    const currentTab = tabs[0];
-    console.log(`Sending ratePage message for ${currentTab.url}`);
-    chrome.runtime.sendMessage({
-      action: "ratePage",
-      url: currentTab.url,
-      rating
-    }, (response) => {
-      console.log("Received response from ratePage action:", response);
-    });
-  });
-}
+async function triggerContentScript(rating) {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
 
-function exportRatings() {
-    chrome.runtime.sendMessage({action: "exportRatings"}, (response) => {
-        if (response && response.data) {
-            const blob = new Blob([response.data], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'pageRatings.json';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url); // Clean up the URL object
-        } else {
-            console.error('Failed to receive data for download.');
-        }
+  try {
+    // Inject Readability.js first
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['Readability.js']
     });
-}
+console.log('Readability.js injected');
+    // Then inject your content script
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['contentScript.js']
+    });
 
-function checkExportEligibility() {
-  console.log("Checking export eligibility");
-  chrome.runtime.sendMessage({action: "checkExportEligibility"}, (response) => {
-    console.log("Received response from checkExportEligibility action:", response);
-    if (response && response.eligibleForExport) {
-      document.getElementById('export').disabled = false;
-    } else {
-      document.getElementById('export').disabled = true;
-    }
-  });
+    // After both scripts are injected, send a message to the content script
+    chrome.tabs.sendMessage(tab.id, { action: "parseAndDownload", rating: rating });
+  } catch (error) {
+    console.error("Script injection failed:", error);
+  }
 }

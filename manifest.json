@@ -2,10 +2,7 @@
   "manifest_version": 3,
   "name": "Page Rater",
   "version": "1.0",
-  "permissions": [
-    "storage",
-    "activeTab"
-  ],
+  "permissions": ["storage", "activeTab", "scripting", "downloads"],
   "background": {
     "service_worker": "background.js"
   },
