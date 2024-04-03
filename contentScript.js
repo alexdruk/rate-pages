@@ -3,8 +3,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       try {
         // Parse the document with Readability
         const article = new Readability(document.cloneNode(true), {
-          debug: true,
-          charThreshold: 1000
+          charThreshold: 4000
         }).parse();
   
         // Prepare the parsed data for download
@@ -12,8 +11,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           id: Date.now(),
           rating: message.rating,
           url: document.location.href,
-          ...article
-        });
+          title: article.title,
+          excerpt: article.excerpt,
+          byline: article.byline,
+          siteName: document.location.hostname,
+          textContent: article.textContent,
+           });
   
         sendResponse({ success: true });
       } catch (error) {
