@@ -22,6 +22,7 @@ if (
           byline: article.byline,
           siteName: document.location.hostname,
           textContent: article.textContent,
+          date: new Date().toISOString().slice(0, 10)
         });
 
         sendResponse({ success: true });
